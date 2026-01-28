@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PowerHell Casino – Web GUI</title>
+  <title>Casino JACKPOT! – Web GUI</title>
   <style>
     :root {
       --bg1: #0b0a12;
@@ -76,6 +76,106 @@
       font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
       letter-spacing: 1px;
       font-size: 13px;
+    }
+
+    .cheat-toggle {
+      position: fixed;
+      top: 16px;
+      right: 18px;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.45);
+      color: var(--lime);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      z-index: 20;
+    }
+
+    .cheat-toggle:hover { transform: translateY(-2px); }
+
+    .cheat-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.7);
+      z-index: 30;
+    }
+
+    .cheat-overlay.active { display: flex; }
+
+    .gameover-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 20% 20%, rgba(255,107,107,0.25), transparent 55%),
+        rgba(3, 6, 12, 0.85);
+      z-index: 40;
+      backdrop-filter: blur(6px);
+    }
+
+    .gameover-overlay.active { display: flex; }
+
+    .gameover-panel {
+      width: min(520px, 92vw);
+      background: rgba(12, 10, 20, 0.92);
+      border: 1px solid rgba(255, 107, 107, 0.45);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 14px;
+      text-align: center;
+    }
+
+    .gameover-panel h2 {
+      margin: 0;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .gameover-stats {
+      display: grid;
+      gap: 8px;
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+    }
+
+    #matrixCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .cheat-panel {
+      position: relative;
+      width: min(520px, 92vw);
+      background: rgba(8,12,18,0.92);
+      border: 1px solid rgba(180,248,200,0.3);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      z-index: 1;
+      display: grid;
+      gap: 14px;
+      backdrop-filter: blur(6px);
+    }
+
+    .cheat-title {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+      color: var(--lime);
     }
 
     .grid {
@@ -281,9 +381,10 @@
   </style>
 </head>
 <body>
+  <button class="cheat-toggle" id="cheatToggle" aria-label="Cheat Menu">☰</button>
   <div class="wrap">
     <section class="hero">
-      <h1 class="title">PowerHell Casino</h1>
+      <h1 class="title">Casino JACKPOT!</h1>
       <p class="subtitle">Slot Machine · Web GUI</p>
     </section>
 
@@ -305,16 +406,11 @@
             <label for="bet">Einsatz</label>
             <input id="bet" type="number" min="1" step="1" placeholder="z.B. 10" />
           </div>
-          <div class="field">
-            <label for="credits">Credits hinzufügen</label>
-            <input id="credits" type="number" min="1" step="1" placeholder="z.B. 50" />
-          </div>
         </div>
 
         <div class="actions">
           <button class="btn-primary" id="play">Play Slot</button>
           <button class="btn-ghost" id="view">View Balance</button>
-          <button class="btn-danger" id="add">Add Credits</button>
           <button class="btn-ghost" id="blackjack">Blackjack</button>
         </div>
 
@@ -339,25 +435,151 @@
     <div class="footer">Web GUI läuft lokal auf localhost.</div>
   </div>
 
+  <div class="cheat-overlay" id="cheatOverlay" aria-hidden="true">
+    <canvas id="matrixCanvas"></canvas>
+    <div class="cheat-panel">
+      <h2 class="cheat-title">Cheat Menu</h2>
+      <div class="inputs">
+        <div class="field">
+          <label for="credits">Credits hinzufügen</label>
+          <input id="credits" type="number" min="1" step="1" placeholder="z.B. 50" />
+        </div>
+        <div class="field">
+          <label for="multiplier">Geld Multiplikator</label>
+          <input id="multiplier" type="number" min="1" max="20" step="0.5" value="1" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-danger" id="add">Add Credits</button>
+        <button class="btn-ghost" id="applyMultiplier">Apply Multiplier</button>
+        <button class="btn-ghost" id="closeCheat">Close</button>
+      </div>
+      <div class="status" id="cheatStatus">Matrix Rain aktiviert.</div>
+    </div>
+  </div>
+
+  <div class="gameover-overlay" id="gameoverOverlay" aria-hidden="true">
+    <div class="gameover-panel">
+      <h2>Game Over</h2>
+      <div class="gameover-stats">
+        <div>Gewonnen: <strong id="statWon">$0</strong></div>
+        <div>Verloren: <strong id="statLost">$0</strong></div>
+      </div>
+      <div class="status" id="gameoverStatus">Kein Guthaben mehr verfügbar.</div>
+      <div class="actions">
+        <button class="btn-primary" id="restart">Restart</button>
+        <button class="btn-ghost" id="closeGameover">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const symbols = ["🍒", "🍋", "⭐", "💎", "7️⃣", "🎲", "🔔"];
     const multipliers = { "🍒": 5, "🍋": 8, "⭐": 15, "💎": 20, "7️⃣": 50, "🎲": 12, "🔔": 10 };
 
     let balance = 100;
     let spinning = false;
+    let totalWon = 0;
+    let totalLost = 0;
 
     const balanceEl = document.getElementById("balance");
     const statusEl = document.getElementById("status");
     const betEl = document.getElementById("bet");
     const creditsEl = document.getElementById("credits");
+    const multiplierEl = document.getElementById("multiplier");
+    const cheatToggle = document.getElementById("cheatToggle");
+    const cheatOverlay = document.getElementById("cheatOverlay");
+    const cheatStatusEl = document.getElementById("cheatStatus");
+    const gameoverOverlay = document.getElementById("gameoverOverlay");
+    const gameoverStatusEl = document.getElementById("gameoverStatus");
+    const statWonEl = document.getElementById("statWon");
+    const statLostEl = document.getElementById("statLost");
     const reels = [
       document.getElementById("reel1"),
       document.getElementById("reel2"),
       document.getElementById("reel3")
     ];
 
+    let cheatMultiplier = 1;
+    let matrixRunning = false;
+    let matrixAnimId = null;
+
+    const canvas = document.getElementById("matrixCanvas");
+    const ctx = canvas.getContext("2d");
+    const matrixChars = "0123456789ABCDEF$#@*+-".split("");
+    let drops = [];
+
+    function resizeMatrix() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const columns = Math.floor(canvas.width / 16);
+      drops = Array.from({ length: columns }, () => Math.floor(Math.random() * canvas.height / 16));
+    }
+
+    function drawMatrix() {
+      if (!matrixRunning) return;
+      ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#b4f8c8";
+      ctx.font = "16px monospace";
+
+      drops.forEach((y, i) => {
+        const text = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+        const x = i * 16;
+        ctx.fillText(text, x, y * 16);
+        if (y * 16 > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        } else {
+          drops[i] += 1;
+        }
+      });
+
+      matrixAnimId = requestAnimationFrame(drawMatrix);
+    }
+
+    function startMatrix() {
+      if (matrixRunning) return;
+      matrixRunning = true;
+      resizeMatrix();
+      drawMatrix();
+    }
+
+    function stopMatrix() {
+      matrixRunning = false;
+      if (matrixAnimId) cancelAnimationFrame(matrixAnimId);
+      matrixAnimId = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
     function updateBalance() {
       balanceEl.textContent = `$${balance}`;
+    }
+
+    function updateStats() {
+      statWonEl.textContent = `$${totalWon}`;
+      statLostEl.textContent = `$${totalLost}`;
+    }
+
+    function showGameOver() {
+      updateStats();
+      gameoverOverlay.classList.add("active");
+      gameoverOverlay.setAttribute("aria-hidden", "false");
+      gameoverStatusEl.textContent = "Kein Guthaben mehr verfügbar.";
+    }
+
+    function hideGameOver() {
+      gameoverOverlay.classList.remove("active");
+      gameoverOverlay.setAttribute("aria-hidden", "true");
+    }
+
+    function resetGame() {
+      balance = 100;
+      totalWon = 0;
+      totalLost = 0;
+      updateBalance();
+      updateStats();
+      setStatus("Neustart! Einsatz setzen und spielen.");
+      hideGameOver();
     }
 
     function setStatus(msg, tone = "") {
@@ -401,6 +623,10 @@
 
     document.getElementById("play").addEventListener("click", () => {
       if (spinning) return;
+      if (balance <= 0) {
+        showGameOver();
+        return;
+      }
 
       const bet = parseInt(betEl.value, 10);
       if (!bet || bet <= 0) {
@@ -413,6 +639,7 @@
       }
 
       balance -= bet;
+      totalLost += bet;
       updateBalance();
       setStatus("Walzen drehen... Viel Glück!");
       spinning = true;
@@ -422,8 +649,10 @@
 
       setTimeout(() => {
         const [r1, r2, r3] = finalSymbols;
-        const winnings = computeWinnings(bet, r1, r2, r3);
+        const baseWinnings = computeWinnings(bet, r1, r2, r3);
+        const winnings = Math.floor(baseWinnings * cheatMultiplier);
         balance += winnings;
+        totalWon += winnings;
         updateBalance();
 
         if (winnings > 0 && r1 === r2 && r2 === r3) {
@@ -434,6 +663,9 @@
           setStatus("Kein Match. Neuer Versuch?", "loss");
         }
         spinning = false;
+        if (balance <= 0) {
+          showGameOver();
+        }
       }, 980);
     });
 
@@ -444,13 +676,49 @@
     document.getElementById("add").addEventListener("click", () => {
       const amount = parseInt(creditsEl.value, 10);
       if (!amount || amount <= 0) {
-        setStatus("Bitte einen gültigen Betrag zum Hinzufügen eingeben.");
+        cheatStatusEl.textContent = "Bitte einen gültigen Betrag zum Hinzufügen eingeben.";
         return;
       }
       balance += amount;
       updateBalance();
-      setStatus(`Credits hinzugefügt: $${amount}. Viel Glück!`, "win");
+      if (balance > 0) hideGameOver();
+      cheatStatusEl.textContent = `Credits hinzugefügt: $${amount}.`;
       creditsEl.value = "";
+    });
+
+    document.getElementById("applyMultiplier").addEventListener("click", () => {
+      const val = parseFloat(multiplierEl.value);
+      if (!val || val < 1) {
+        cheatStatusEl.textContent = "Multiplikator muss mindestens 1 sein.";
+        return;
+      }
+      cheatMultiplier = val;
+      cheatStatusEl.textContent = `Multiplikator aktiv: ${cheatMultiplier}x.`;
+    });
+
+    document.getElementById("closeCheat").addEventListener("click", () => {
+      cheatOverlay.classList.remove("active");
+      cheatOverlay.setAttribute("aria-hidden", "true");
+      stopMatrix();
+    });
+
+    document.getElementById("restart").addEventListener("click", () => {
+      resetGame();
+    });
+
+    document.getElementById("closeGameover").addEventListener("click", () => {
+      hideGameOver();
+    });
+
+    cheatToggle.addEventListener("click", () => {
+      cheatOverlay.classList.add("active");
+      cheatOverlay.setAttribute("aria-hidden", "false");
+      cheatStatusEl.textContent = `Cheat Menu geöffnet. Multiplikator: ${cheatMultiplier}x.`;
+      startMatrix();
+    });
+
+    window.addEventListener("resize", () => {
+      if (matrixRunning) resizeMatrix();
     });
 
     document.getElementById("blackjack").addEventListener("click", () => {
@@ -458,6 +726,7 @@
     });
 
     updateBalance();
+    updateStats();
   </script>
 </body>
 </html>
