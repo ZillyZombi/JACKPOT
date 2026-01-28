@@ -1,0 +1,463 @@
+﻿<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PowerHell Casino – Web GUI</title>
+  <style>
+    :root {
+      --bg1: #0b0a12;
+      --bg2: #1a1230;
+      --accent: #f7c948;
+      --accent-2: #ff6b6b;
+      --cyan: #2de2e6;
+      --lime: #b4f8c8;
+      --panel: rgba(255, 255, 255, 0.06);
+      --panel-2: rgba(255, 255, 255, 0.09);
+      --text: #f6f4ff;
+      --muted: #b9b6c9;
+      --shadow: 0 20px 60px rgba(0,0,0,0.45);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% 10%, #2a1b4d 0%, transparent 60%),
+        radial-gradient(1000px 500px at 90% 20%, #12344d 0%, transparent 60%),
+        linear-gradient(120deg, var(--bg1), var(--bg2));
+      font-family: "Cinzel", "Playfair Display", "Garamond", serif;
+      display: grid;
+      place-items: center;
+      padding: 32px 20px 48px;
+    }
+
+    .wrap {
+      width: min(1000px, 96vw);
+      display: grid;
+      gap: 24px;
+      animation: fadeUp 900ms ease-out;
+    }
+
+    .hero {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 24px 28px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: -40% auto auto -20%;
+      width: 420px;
+      height: 420px;
+      background: radial-gradient(circle, rgba(247,201,72,0.25), transparent 70%);
+      filter: blur(10px);
+      pointer-events: none;
+    }
+
+    .title {
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: 2px;
+      margin: 0 0 6px 0;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+      letter-spacing: 1px;
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+    }
+
+    .panel {
+      background: var(--panel-2);
+      border-radius: 18px;
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: var(--shadow);
+      animation: fadeUp 900ms ease-out;
+      animation-delay: 120ms;
+      animation-fill-mode: both;
+    }
+
+    .slot {
+      display: grid;
+      gap: 16px;
+    }
+
+    .reels {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      align-items: center;
+      background: rgba(0,0,0,0.2);
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .reel {
+      height: 110px;
+      border-radius: 14px;
+      background: linear-gradient(160deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04));
+      display: grid;
+      place-items: center;
+      font-size: 48px;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.35);
+      transition: transform 220ms ease;
+    }
+
+    .reel.spin {
+      animation: shake 200ms ease-in-out infinite;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+    }
+
+    button:hover { transform: translateY(-2px); }
+
+    .btn-primary {
+      background: linear-gradient(120deg, var(--accent), #ffe28a);
+      color: #2b1c00;
+      box-shadow: 0 8px 20px rgba(247,201,72,0.35);
+    }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .btn-danger {
+      background: linear-gradient(120deg, #ff6b6b, #ff8fab);
+      color: #2b0a0a;
+      box-shadow: 0 8px 18px rgba(255,107,107,0.35);
+    }
+
+    .inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .field {
+      background: rgba(0,0,0,0.2);
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(10,10,20,0.6);
+      color: var(--text);
+      font-size: 16px;
+    }
+
+    .status {
+      min-height: 72px;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.25);
+      border: 1px dashed rgba(255,255,255,0.18);
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+      letter-spacing: 0.5px;
+    }
+
+    .payouts {
+      display: grid;
+      gap: 10px;
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+    }
+
+    .payouts h3 {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+
+    .payouts ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .balance {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+    }
+
+    .balance strong {
+      font-size: 24px;
+      color: var(--lime);
+    }
+
+    .footer {
+      text-align: center;
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes shake {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+      100% { transform: translateY(0); }
+    }
+
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+      .actions { grid-template-columns: 1fr; }
+      .inputs { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1 class="title">PowerHell Casino</h1>
+      <p class="subtitle">Slot Machine · Web GUI</p>
+    </section>
+
+    <section class="grid">
+      <div class="panel slot">
+        <div class="balance">
+          <span class="badge">Balance</span>
+          <strong id="balance">$100</strong>
+        </div>
+
+        <div class="reels">
+          <div class="reel" id="reel1">🍒</div>
+          <div class="reel" id="reel2">🍋</div>
+          <div class="reel" id="reel3">⭐</div>
+        </div>
+
+        <div class="inputs">
+          <div class="field">
+            <label for="bet">Einsatz</label>
+            <input id="bet" type="number" min="1" step="1" placeholder="z.B. 10" />
+          </div>
+          <div class="field">
+            <label for="credits">Credits hinzufügen</label>
+            <input id="credits" type="number" min="1" step="1" placeholder="z.B. 50" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn-primary" id="play">Play Slot</button>
+          <button class="btn-ghost" id="view">View Balance</button>
+          <button class="btn-danger" id="add">Add Credits</button>
+          <button class="btn-ghost" id="blackjack">Blackjack</button>
+        </div>
+
+        <div class="status" id="status">Bereit für den nächsten Spin.</div>
+      </div>
+
+      <div class="panel payouts">
+        <h3>Payouts</h3>
+        <ul>
+          <li>3x 7️⃣ = 50x | 2x 7️⃣ = 10x</li>
+          <li>3x 💎 = 20x | 2x 💎 = 5x</li>
+          <li>3x ⭐ = 15x | 2x ⭐ = 3x</li>
+          <li>3x 🔔 = 10x | 2x 🔔 = 2x</li>
+          <li>3x 🍋 = 8x | 2x 🍋 = 1x</li>
+          <li>3x 🍒 = 5x | 2x 🍒 = 1x</li>
+          <li>3x 🎲 = 12x | 2x 🎲 = 6x</li>
+        </ul>
+        <div class="badge">Symbols: 🍒 🍋 ⭐ 💎 7️⃣ 🎲 🔔</div>
+      </div>
+    </section>
+
+    <div class="footer">Web GUI läuft lokal auf localhost.</div>
+  </div>
+
+  <script>
+    const symbols = ["🍒", "🍋", "⭐", "💎", "7️⃣", "🎲", "🔔"];
+    const multipliers = { "🍒": 5, "🍋": 8, "⭐": 15, "💎": 20, "7️⃣": 50, "🎲": 12, "🔔": 10 };
+
+    let balance = 100;
+    let spinning = false;
+
+    const balanceEl = document.getElementById("balance");
+    const statusEl = document.getElementById("status");
+    const betEl = document.getElementById("bet");
+    const creditsEl = document.getElementById("credits");
+    const reels = [
+      document.getElementById("reel1"),
+      document.getElementById("reel2"),
+      document.getElementById("reel3")
+    ];
+
+    function updateBalance() {
+      balanceEl.textContent = `$${balance}`;
+    }
+
+    function setStatus(msg, tone = "") {
+      statusEl.textContent = msg;
+      statusEl.style.borderColor = tone === "win" ? "rgba(180,248,200,0.6)" :
+        tone === "loss" ? "rgba(255,107,107,0.6)" : "rgba(255,255,255,0.18)";
+    }
+
+    function randomSymbol() {
+      return symbols[Math.floor(Math.random() * symbols.length)];
+    }
+
+    function spinReels(finalSymbols) {
+      reels.forEach(r => r.classList.add("spin"));
+
+      const timers = reels.map((reel, idx) => {
+        return setInterval(() => {
+          reel.textContent = randomSymbol();
+        }, 80);
+      });
+
+      setTimeout(() => {
+        timers.forEach(clearInterval);
+        reels.forEach((reel, idx) => {
+          reel.textContent = finalSymbols[idx];
+          reel.classList.remove("spin");
+        });
+      }, 900);
+    }
+
+    function computeWinnings(bet, r1, r2, r3) {
+      if (r1 === r2 && r2 === r3) {
+        return bet * multipliers[r1];
+      }
+      if (r1 === r2 || r2 === r3 || r1 === r3) {
+        const symbol = (r1 === r2 || r1 === r3) ? r1 : r2;
+        return Math.floor(bet * multipliers[symbol] / 2);
+      }
+      return 0;
+    }
+
+    document.getElementById("play").addEventListener("click", () => {
+      if (spinning) return;
+
+      const bet = parseInt(betEl.value, 10);
+      if (!bet || bet <= 0) {
+        setStatus("Bitte einen gültigen Einsatz eingeben.");
+        return;
+      }
+      if (bet > balance) {
+        setStatus("Nicht genug Balance. Bitte Credits hinzufügen.");
+        return;
+      }
+
+      balance -= bet;
+      updateBalance();
+      setStatus("Walzen drehen... Viel Glück!");
+      spinning = true;
+
+      const finalSymbols = [randomSymbol(), randomSymbol(), randomSymbol()];
+      spinReels(finalSymbols);
+
+      setTimeout(() => {
+        const [r1, r2, r3] = finalSymbols;
+        const winnings = computeWinnings(bet, r1, r2, r3);
+        balance += winnings;
+        updateBalance();
+
+        if (winnings > 0 && r1 === r2 && r2 === r3) {
+          setStatus(`JACKPOT! 3x ${r1} – Gewinn: $${winnings}`, "win");
+        } else if (winnings > 0) {
+          setStatus(`WIN! 2x Match – Gewinn: $${winnings}`, "win");
+        } else {
+          setStatus("Kein Match. Neuer Versuch?", "loss");
+        }
+        spinning = false;
+      }, 980);
+    });
+
+    document.getElementById("view").addEventListener("click", () => {
+      setStatus(`Aktueller Kontostand: $${balance}`);
+    });
+
+    document.getElementById("add").addEventListener("click", () => {
+      const amount = parseInt(creditsEl.value, 10);
+      if (!amount || amount <= 0) {
+        setStatus("Bitte einen gültigen Betrag zum Hinzufügen eingeben.");
+        return;
+      }
+      balance += amount;
+      updateBalance();
+      setStatus(`Credits hinzugefügt: $${amount}. Viel Glück!`, "win");
+      creditsEl.value = "";
+    });
+
+    document.getElementById("blackjack").addEventListener("click", () => {
+      window.location.href = "http://localhost:8086/";
+    });
+
+    updateBalance();
+  </script>
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PowerHell Casino – Blackjack</title>
+  <style>
+    :root {
+      --felt: #0f2e1f;
+      --felt-2: #143c28;
+      --gold: #d4af37;
+      --ink: #f7f3e8;
+      --muted: #c7bfa8;
+      --panel: rgba(255, 255, 255, 0.08);
+      --shadow: 0 24px 60px rgba(0,0,0,0.45);
+      --accent: #ffb703;
+      --danger: #ff6b6b;
+      --win: #6df2a3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(800px 400px at 15% 10%, rgba(255, 183, 3, 0.15), transparent 60%),
+        radial-gradient(900px 500px at 90% 20%, rgba(255, 107, 107, 0.12), transparent 60%),
+        linear-gradient(160deg, var(--felt), var(--felt-2));
+      color: var(--ink);
+      font-family: "Libre Baskerville", "Garamond", serif;
+      display: grid;
+      place-items: center;
+      padding: 28px 18px 48px;
+    }
+
+    .table {
+      width: min(960px, 96vw);
+      background: var(--panel);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 18px;
+      animation: fadeIn 800ms ease-out;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-size: clamp(24px, 3.5vw, 36px);
+    }
+
+    .balance {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+    }
+
+    .balance strong {
+      font-size: 22px;
+      color: var(--gold);
+    }
+
+    .zone {
+      background: rgba(0,0,0,0.25);
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      display: grid;
+      gap: 10px;
+    }
+
+    .zone h3 {
+      margin: 0;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+    }
+
+    .hand {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      min-height: 60px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 10px 12px;
+      min-width: 46px;
+      text-align: center;
+      font-size: 18px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.25);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .field {
+      background: rgba(0,0,0,0.25);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(10,10,20,0.6);
+      color: var(--ink);
+      font-size: 16px;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 10px;
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+    }
+
+    button:hover { transform: translateY(-2px); }
+
+    .btn-primary {
+      background: linear-gradient(120deg, var(--accent), #ffe08a);
+      color: #2b1c00;
+      box-shadow: 0 8px 20px rgba(255,183,3,0.35);
+    }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.08);
+      color: var(--ink);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .btn-danger {
+      background: linear-gradient(120deg, #ff6b6b, #ff8fab);
+      color: #2b0a0a;
+      box-shadow: 0 8px 18px rgba(255,107,107,0.35);
+    }
+
+    .status {
+      min-height: 72px;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.3);
+      border: 1px dashed rgba(255,255,255,0.18);
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: "Space Grotesk", "Futura", "Trebuchet MS", sans-serif;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 840px) {
+      .controls { grid-template-columns: 1fr; }
+      .buttons { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="table">
+    <header>
+      <h1>Blackjack</h1>
+      <div class="balance">
+        <span>Balance</span>
+        <strong id="balance">$100.00</strong>
+      </div>
+    </header>
+
+    <section class="zone">
+      <h3>Dealer</h3>
+      <div class="hand" id="dealer-hand"></div>
+      <div class="hint" id="dealer-value">Wert: ?</div>
+    </section>
+
+    <section class="zone">
+      <h3>Player</h3>
+      <div class="hand" id="player-hand"></div>
+      <div class="hint" id="player-value">Wert: 0</div>
+    </section>
+
+    <section class="controls">
+      <div class="field">
+        <label for="bet">Einsatz</label>
+        <input id="bet" type="number" min="1" step="1" placeholder="z.B. 10" />
+      </div>
+      <div class="buttons">
+        <button class="btn-primary" id="deal">Deal</button>
+        <button class="btn-ghost" id="hit">Hit</button>
+        <button class="btn-ghost" id="stand">Stand</button>
+        <button class="btn-danger" id="slot">Slot</button>
+      </div>
+    </section>
+
+    <div class="status" id="status">Setze deinen Einsatz und drücke Deal.</div>
+    <div class="hint">Blackjack zahlt 3:2. Dealer zieht bis 17.</div>
+  </main>
+
+  <script>
+    const suits = ["♠", "♥", "♦", "♣"];
+    const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+
+    let deck = [];
+    let player = [];
+    let dealer = [];
+    let balance = 100;
+    let currentBet = 0;
+    let inRound = false;
+
+    const balanceEl = document.getElementById("balance");
+    const statusEl = document.getElementById("status");
+    const betEl = document.getElementById("bet");
+    const playerHandEl = document.getElementById("player-hand");
+    const dealerHandEl = document.getElementById("dealer-hand");
+    const playerValueEl = document.getElementById("player-value");
+    const dealerValueEl = document.getElementById("dealer-value");
+
+    function updateBalance() {
+      balanceEl.textContent = `$${balance.toFixed(2)}`;
+    }
+
+    function setStatus(msg, tone = "") {
+      statusEl.textContent = msg;
+      statusEl.style.borderColor = tone === "win" ? "rgba(109,242,163,0.6)" :
+        tone === "loss" ? "rgba(255,107,107,0.6)" : "rgba(255,255,255,0.18)";
+    }
+
+    function buildDeck() {
+      deck = [];
+      for (const suit of suits) {
+        for (const rank of ranks) {
+          const value = rank === "A" ? 11 : (["J", "Q", "K"].includes(rank) ? 10 : Number(rank));
+          deck.push({ rank, suit, value });
+        }
+      }
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+    }
+
+    function drawCard() {
+      if (deck.length < 15) buildDeck();
+      return deck.pop();
+    }
+
+    function handValue(hand) {
+      let total = hand.reduce((sum, c) => sum + c.value, 0);
+      let aces = hand.filter(c => c.rank === "A").length;
+      while (total > 21 && aces > 0) {
+        total -= 10;
+        aces--;
+      }
+      return total;
+    }
+
+    function renderHands(showDealer = false) {
+      playerHandEl.innerHTML = "";
+      dealerHandEl.innerHTML = "";
+
+      player.forEach(card => {
+        const el = document.createElement("div");
+        el.className = "card";
+        el.textContent = `${card.rank}${card.suit}`;
+        playerHandEl.appendChild(el);
+      });
+
+      dealer.forEach((card, idx) => {
+        const el = document.createElement("div");
+        el.className = "card";
+        el.textContent = showDealer || idx > 0 ? `${card.rank}${card.suit}` : "??";
+        dealerHandEl.appendChild(el);
+      });
+
+      playerValueEl.textContent = `Wert: ${handValue(player)}`;
+      dealerValueEl.textContent = showDealer ? `Wert: ${handValue(dealer)}` : "Wert: ?";
+    }
+
+    function endRound(outcome, payout, tone) {
+      balance += payout;
+      updateBalance();
+      setStatus(outcome, tone);
+      inRound = false;
+      renderHands(true);
+    }
+
+    function checkForBlackjack() {
+      const playerVal = handValue(player);
+      const dealerVal = handValue(dealer);
+      if (playerVal === 21 && dealerVal === 21) {
+        endRound("Push! Beide haben Blackjack.", currentBet, "");
+        return true;
+      }
+      if (playerVal === 21) {
+        const payout = currentBet * 2.5;
+        endRound(`Blackjack! Gewinn $${(payout - currentBet).toFixed(2)}.`, payout, "win");
+        return true;
+      }
+      if (dealerVal === 21) {
+        endRound("Dealer hat Blackjack. Du verlierst.", 0, "loss");
+        return true;
+      }
+      return false;
+    }
+
+    document.getElementById("deal").addEventListener("click", () => {
+      if (inRound) {
+        setStatus("Runde läuft bereits. Hit oder Stand.", "");
+        return;
+      }
+
+      const bet = parseInt(betEl.value, 10);
+      if (!bet || bet <= 0) {
+        setStatus("Bitte gültigen Einsatz eingeben.", "");
+        return;
+      }
+      if (bet > balance) {
+        setStatus("Nicht genug Balance für diesen Einsatz.", "loss");
+        return;
+      }
+
+      currentBet = bet;
+      balance -= bet;
+      updateBalance();
+      player = [drawCard(), drawCard()];
+      dealer = [drawCard(), drawCard()];
+      inRound = true;
+      renderHands(false);
+
+      if (!checkForBlackjack()) {
+        setStatus("Karten sind ausgeteilt. Hit oder Stand?", "");
+      }
+    });
+
+    document.getElementById("hit").addEventListener("click", () => {
+      if (!inRound) return;
+      player.push(drawCard());
+      renderHands(false);
+
+      const value = handValue(player);
+      if (value > 21) {
+        endRound("Bust! Du verlierst.", 0, "loss");
+      } else if (value === 21) {
+        document.getElementById("stand").click();
+      }
+    });
+
+    document.getElementById("stand").addEventListener("click", () => {
+      if (!inRound) return;
+      while (handValue(dealer) < 17) {
+        dealer.push(drawCard());
+      }
+
+      const playerVal = handValue(player);
+      const dealerVal = handValue(dealer);
+
+      if (dealerVal > 21) {
+        endRound("Dealer bust! Du gewinnst.", currentBet * 2, "win");
+      } else if (playerVal > dealerVal) {
+        endRound("Du gewinnst!", currentBet * 2, "win");
+      } else if (playerVal < dealerVal) {
+        endRound("Dealer gewinnt. Du verlierst.", 0, "loss");
+      } else {
+        endRound("Push! Einsatz zurück.", currentBet, "");
+      }
+    });
+
+    document.getElementById("slot").addEventListener("click", () => {
+      window.location.href = "http://localhost:8085/";
+    });
+
+    buildDeck();
+    updateBalance();
+    renderHands(false);
+  </script>
+</body>
+</html>
